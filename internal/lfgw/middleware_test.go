@@ -543,7 +543,7 @@ func Test_rewriteRequestMiddleware(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		acl, err := querymodifier.NewACL("monitoring")
+		acl, err := querymodifier.NewACL("metrics: { namespace: 'monitoring' }")
 		assert.Nil(t, err)
 
 		ctx := context.WithValue(r.Context(), contextKeyACL, acl)

@@ -178,9 +178,9 @@ func (app *application) oidcMiddleware(next http.Handler) http.Handler {
 			app.clientErrorMessage(w, http.StatusUnauthorized, err)
 			return
 		}
-
-		app.enrichDebugLogContext(r, "label_filter", string(acl.LabelFilter.AppendString(nil)))
-
+		for _, filter := range acl.Metrics {
+			app.enrichDebugLogContext(r, "label_filter", string(filter.AppendString(nil)))
+		}
 		ctx = context.WithValue(ctx, contextKeyACL, acl)
 		r = r.WithContext(ctx)
 

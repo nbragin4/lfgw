@@ -16,143 +16,158 @@ func Test_NewACL(t *testing.T) {
 	}{
 		{
 			name:   ".* (full access)",
-			rawACL: ".*",
+			rawACL: "metrics: { namespace: '.*' }",
 			want: ACL{
 				Fullaccess: true,
-				LabelFilter: metricsql.LabelFilter{
-					Label:      "namespace",
-					Value:      ".*",
-					IsRegexp:   true,
-					IsNegative: false,
+				Metrics: map[string]metricsql.LabelFilter{
+					"namespace": {
+						Label:      "namespace",
+						Value:      ".*",
+						IsRegexp:   true,
+						IsNegative: false,
+					},
 				},
-				RawACL: ".*",
+				RawACL: "metrics: { namespace: '.*' }",
 			},
 			fail: false,
 		},
 		{
 			name:   "min.*, .*, stolon (implicit full access, same as .*)",
-			rawACL: "min.*, .*, stolon",
+			rawACL: "metrics: { namespace: 'min.*, .*, stolon' }",
 			want: ACL{
 				Fullaccess: true,
-				LabelFilter: metricsql.LabelFilter{
-					Label:      "namespace",
-					Value:      ".*",
-					IsRegexp:   true,
-					IsNegative: false,
+				Metrics: map[string]metricsql.LabelFilter{
+					"namespace": {
+						Label:      "namespace",
+						Value:      ".*",
+						IsRegexp:   true,
+						IsNegative: false,
+					},
 				},
-				RawACL: ".*",
+				RawACL: "metrics: { namespace: '.*' }",
 			},
 			fail: false,
 		},
 		{
 			name:   "minio (only minio)",
-			rawACL: "minio",
+			rawACL: "metrics: { namespace: 'minio' }",
 			want: ACL{
 				Fullaccess: false,
-				LabelFilter: metricsql.LabelFilter{
-					Label:      "namespace",
-					Value:      "minio",
-					IsRegexp:   false,
-					IsNegative: false,
-				},
-				RawACL: "minio",
+				Metrics: map[string]metricsql.LabelFilter{
+					"namespace": {
+						Label:      "namespace",
+						Value:      "minio",
+						IsRegexp:   false,
+						IsNegative: false,
+					}},
+				RawACL: "metrics: { namespace: 'minio' }",
 			},
 			fail: false,
 		},
 		{
 			name:   "min.* (one regexp)",
-			rawACL: "min.*",
+			rawACL: "metrics: { namespace: 'min.*' }",
 			want: ACL{
 				Fullaccess: false,
-				LabelFilter: metricsql.LabelFilter{
-					Label:      "namespace",
-					Value:      "min.*",
-					IsRegexp:   true,
-					IsNegative: false,
+				Metrics: map[string]metricsql.LabelFilter{
+					"namespace": {
+						Label:      "namespace",
+						Value:      "min.*",
+						IsRegexp:   true,
+						IsNegative: false,
+					},
 				},
-				RawACL: "min.*",
+				RawACL: "metrics: { namespace: 'min.*' }",
 			},
 			fail: false,
 		},
 		{
 			name:   "min.* (one anchored regexp)",
-			rawACL: "^(min.*)$",
+			rawACL: "metrics: { namespace: '^(min.*)$' }",
 			want: ACL{
 				Fullaccess: false,
-				LabelFilter: metricsql.LabelFilter{
-					Label:      "namespace",
-					Value:      "min.*",
-					IsRegexp:   true,
-					IsNegative: false,
-				},
-				RawACL: "min.*",
+				Metrics: map[string]metricsql.LabelFilter{
+					"namespace": {
+						Label:      "namespace",
+						Value:      "min.*",
+						IsRegexp:   true,
+						IsNegative: false,
+					}},
+				RawACL: "metrics: { namespace: 'min.*' }",
 			},
 			fail: false,
 		},
 		{
 			name:   "minio, stolon (two namespaces)",
-			rawACL: "minio, stolon",
+			rawACL: "metrics: { namespace: 'minio, stolon' }",
 			want: ACL{
 				Fullaccess: false,
-				LabelFilter: metricsql.LabelFilter{
-					Label:      "namespace",
-					Value:      "minio|stolon",
-					IsRegexp:   true,
-					IsNegative: false,
+				Metrics: map[string]metricsql.LabelFilter{
+					"namespace": {
+						Label:      "namespace",
+						Value:      "minio|stolon",
+						IsRegexp:   true,
+						IsNegative: false,
+					},
 				},
-				RawACL: "minio, stolon",
+				RawACL: "metrics: { namespace: 'minio, stolon' }",
 			},
 			fail: false,
 		},
 		{
 			name:   "min.*, stolon (regexp and non-regexp)",
-			rawACL: "min.*, stolon",
+			rawACL: "metrics: { namespace: 'min.*, stolon' }",
 			want: ACL{
 				Fullaccess: false,
-				LabelFilter: metricsql.LabelFilter{
-					Label:      "namespace",
-					Value:      "min.*|stolon",
-					IsRegexp:   true,
-					IsNegative: false,
-				},
-				RawACL: "min.*, stolon",
+				Metrics: map[string]metricsql.LabelFilter{
+					"namespace": {
+						Label:      "namespace",
+						Value:      "min.*|stolon",
+						IsRegexp:   true,
+						IsNegative: false,
+					}},
+				RawACL: "metrics: { namespace: 'min.*, stolon' }",
 			},
 			fail: false,
 		},
 		// TODO: assign special meaning to this regexp?
 		{
 			name:   ".+ (is a regexp)",
-			rawACL: ".+",
+			rawACL: "metrics: { namespace: '.+' }",
 			want: ACL{
 				Fullaccess: false,
-				LabelFilter: metricsql.LabelFilter{
-					Label:      "namespace",
-					Value:      ".+",
-					IsRegexp:   true,
-					IsNegative: false,
+				Metrics: map[string]metricsql.LabelFilter{
+					"namespace": {
+						Label:      "namespace",
+						Value:      ".+",
+						IsRegexp:   true,
+						IsNegative: false,
+					},
 				},
-				RawACL: ".+",
+				RawACL: "metrics: { namespace: '.+' }",
 			},
 			fail: false,
 		},
 		{
 			name:   "a,b (is a correct regexp)",
-			rawACL: "a,b",
+			rawACL: "metrics: { namespace: 'a,b' }",
 			want: ACL{
 				Fullaccess: false,
-				LabelFilter: metricsql.LabelFilter{
-					Label:      "namespace",
-					Value:      "a|b",
-					IsRegexp:   true,
-					IsNegative: false,
+				Metrics: map[string]metricsql.LabelFilter{
+					"namespace": {
+						Label:      "namespace",
+						Value:      "a|b",
+						IsRegexp:   true,
+						IsNegative: false,
+					},
 				},
-				RawACL: "a, b",
+				RawACL: "metrics: { namespace: 'a,b' }",
 			},
 			fail: false,
 		},
 		{
 			name:   "[ (incorrect regexp)",
-			rawACL: "[",
+			rawACL: "metrics: { namespace: '[' }",
 			want:   ACL{},
 			fail:   true,
 		},

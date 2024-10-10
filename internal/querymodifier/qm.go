@@ -19,7 +19,7 @@ type QueryModifier struct {
 func (qm *QueryModifier) GetModifiedEncodedURLValues(params url.Values) (string, error) {
 	newParams := url.Values{}
 
-	if qm.ACL.RawACL == "" || string(qm.ACL.LabelFilter.AppendString(nil)) == "" {
+	if len(qm.ACL.Metrics) == 0 {
 		return "", fmt.Errorf("ACL cannot be empty")
 	}
 
@@ -52,20 +52,20 @@ func (qm *QueryModifier) GetModifiedEncodedURLValues(params url.Values) (string,
 	return newParams.Encode(), nil
 }
 
-// modifyMetricExpr walks through the query and modifies only metricsql.Expr based on the supplied acl with label filter.
+// modifyMetricExpr walks through the query and modifies only metricsql.Expr based on the supplied acl with label filters.
 func (qm *QueryModifier) modifyMetricExpr(expr metricsql.Expr) metricsql.Expr {
 	newExpr := metricsql.Clone(expr)
 
-	// We cannot pass any extra parameters, so we need to use a closure
-	// to say which label filter to add
 	modifyLabelFilter := func(expr metricsql.Expr) {
 		if me, ok := expr.(*metricsql.MetricExpr); ok {
-			if qm.ACL.LabelFilter.IsRegexp {
-				if !qm.EnableDeduplication || !qm.shouldNotBeModified(me.LabelFilters) {
-					me.LabelFilters = appendOrMergeRegexpLF(me.LabelFilters, qm.ACL.LabelFilter)
+			for label, lf := range qm.ACL.Metrics {
+				if lf.IsRegexp {
+					if !qm.EnableDeduplication || !qm.shouldNotBeModified(me.LabelFilters, label) {
+						me.LabelFilters = appendOrMergeRegexpLF(me.LabelFilters, lf)
+					}
+				} else {
+					me.LabelFilters = replaceLFByName(me.LabelFilters, lf)
 				}
-			} else {
-				me.LabelFilters = replaceLFByName(me.LabelFilters, qm.ACL.LabelFilter)
 			}
 		}
 	}
@@ -76,9 +76,8 @@ func (qm *QueryModifier) modifyMetricExpr(expr metricsql.Expr) metricsql.Expr {
 	return newExpr
 }
 
-// TODO: simplify description
-// shouldNotBeModified helps to understand whether the original label filters have to be modified. The function returns false if any of the original filters do not match expectations described further. It returns true if [the list of original filters contains either a fake positive regexp (no special symbols, e.g. namespace=~"kube-system") or a non-regexp filter] and [acl.LabelFilter is a matching positive regexp]. Also, if original filter is a subfilter of the new filter or has the same value; if acl gives full access. Target label is taken from the acl.LabelFilter.
-func (qm *QueryModifier) shouldNotBeModified(filters []metricsql.LabelFilter) bool {
+// shouldNotBeModified helps to understand whether the original label filters have to be modified.
+func (qm *QueryModifier) shouldNotBeModified(filters []metricsql.LabelFilter, label string) bool {
 	if qm.ACL.Fullaccess {
 		return true
 	}
@@ -86,33 +85,24 @@ func (qm *QueryModifier) shouldNotBeModified(filters []metricsql.LabelFilter) bo
 	seen := 0
 	seenUnmodified := 0
 
-	// TODO: move to a map? Might not be worth doing as filters of the same type are unlikely
-	rawSubACLs := strings.Split(qm.ACL.RawACL, ", ")
-	newLF := qm.ACL.LabelFilter
+	acl := qm.ACL.Metrics[label]
 
 	for _, filter := range filters {
-		// For filter, only positive regexps and non-regexps considered, for newLF - positive regexps.
-		if filter.Label == newLF.Label && !filter.IsNegative && newLF.IsRegexp && !newLF.IsNegative {
+		if filter.Label == label && !filter.IsNegative && acl.IsRegexp && !acl.IsNegative {
 			seen++
 
-			// Target: non-regexps or fake regexps
 			if !filter.IsRegexp || isFakePositiveRegexp(filter) {
-				// Prometheus treats all regexp queries as anchored, whereas our raw regexp doesn't have them. So, we should take anchored values.
-				re, err := metricsql.CompileRegexpAnchored(newLF.Value)
-				// There shouldn't be any errors, though, just in case, better to skip deduplication
+				re, err := metricsql.CompileRegexpAnchored(acl.Value)
 				if err == nil && re.MatchString(filter.Value) {
 					seenUnmodified++
 					continue
 				}
 			}
 
-			// Target: both are positive regexps, filter is a subfilter of the newLF or has the same value
 			if filter.IsRegexp {
-				for _, rawSubACL := range rawSubACLs {
-					if filter.Value == rawSubACL {
-						seenUnmodified++
-						continue
-					}
+				if filter.Value == acl.Value {
+					seenUnmodified++
+					continue
 				}
 			}
 		}

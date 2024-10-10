@@ -12,31 +12,37 @@ func TestACL_rolesToRawACL(t *testing.T) {
 	a := ACLs{
 		"admin": ACL{
 			Fullaccess: true,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      ".*",
-				IsRegexp:   true,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      ".*",
+					IsRegexp:   true,
+					IsNegative: false,
+				},
 			},
 			RawACL: ".*",
 		},
 		"multiple-values": ACL{
 			Fullaccess: false,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      "ku.*|min.*",
-				IsRegexp:   true,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      "ku.*|min.*",
+					IsRegexp:   true,
+					IsNegative: false,
+				},
 			},
 			RawACL: "ku.*, min.*",
 		},
 		"single-value": ACL{
 			Fullaccess: false,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      "default",
-				IsRegexp:   false,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      "default",
+					IsRegexp:   false,
+					IsNegative: false,
+				},
 			},
 			RawACL: "default",
 		},
@@ -82,31 +88,37 @@ func TestACL_GetUserACL(t *testing.T) {
 	a := ACLs{
 		"admin": ACL{
 			Fullaccess: true,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      ".*",
-				IsRegexp:   true,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      ".*",
+					IsRegexp:   true,
+					IsNegative: false,
+				},
 			},
 			RawACL: ".*",
 		},
 		"multiple-values": ACL{
 			Fullaccess: false,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      "ku.*|min.*",
-				IsRegexp:   true,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      "ku.*|min.*",
+					IsRegexp:   true,
+					IsNegative: false,
+				},
 			},
 			RawACL: "ku.*, min.*",
 		},
 		"single-value": ACL{
 			Fullaccess: false,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      "default",
-				IsRegexp:   false,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      "default",
+					IsRegexp:   false,
+					IsNegative: false,
+				},
 			},
 			RawACL: "default",
 		},
@@ -150,11 +162,13 @@ func TestACL_GetUserACL(t *testing.T) {
 
 		want := ACL{
 			Fullaccess: false,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      "default|ku.*|min.*",
-				IsRegexp:   true,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      "default|ku.*|min.*",
+					IsRegexp:   true,
+					IsNegative: false,
+				},
 			},
 			RawACL: rawACL,
 		}
@@ -170,11 +184,13 @@ func TestACL_GetUserACL(t *testing.T) {
 
 		want := ACL{
 			Fullaccess: false,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      "unknown-role",
-				IsRegexp:   false,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      "unknown-role",
+					IsRegexp:   false,
+					IsNegative: false,
+				},
 			},
 			RawACL: "unknown-role",
 		}
@@ -189,11 +205,13 @@ func TestACL_GetUserACL(t *testing.T) {
 
 		want := ACL{
 			Fullaccess: false,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      "ku.*|min.*|default|unknown-role",
-				IsRegexp:   true,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      "ku.*|min.*|default|unknown-role",
+					IsRegexp:   true,
+					IsNegative: false,
+				},
 			},
 			RawACL: "ku.*, min.*, default, unknown-role",
 		}
@@ -229,11 +247,13 @@ func TestACL_GetUserACL(t *testing.T) {
 
 		want := ACL{
 			Fullaccess: false,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      "ku.*|min.*|default|unknown-role1|unknown-role2",
-				IsRegexp:   true,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      "ku.*|min.*|default|unknown-role1|unknown-role2",
+					IsRegexp:   true,
+					IsNegative: false,
+				},
 			},
 			RawACL: "ku.*, min.*, default, unknown-role1, unknown-role2",
 		}
@@ -248,11 +268,13 @@ func TestACL_GetUserACL(t *testing.T) {
 
 		want := ACL{
 			Fullaccess: true,
-			LabelFilter: metricsql.LabelFilter{
-				Label:      "namespace",
-				Value:      ".*",
-				IsRegexp:   true,
-				IsNegative: false,
+			Metrics: map[string]metricsql.LabelFilter{
+				"namespace": {
+					Label:      "namespace",
+					Value:      ".*",
+					IsRegexp:   true,
+					IsNegative: false,
+				},
 			},
 			RawACL: ".*",
 		}
@@ -275,11 +297,13 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 			want: ACLs{
 				"admin": ACL{
 					Fullaccess: true,
-					LabelFilter: metricsql.LabelFilter{
-						Label:      "namespace",
-						Value:      ".*",
-						IsRegexp:   true,
-						IsNegative: false,
+					Metrics: map[string]metricsql.LabelFilter{
+						"namespace": {
+							Label:      "namespace",
+							Value:      ".*",
+							IsRegexp:   true,
+							IsNegative: false,
+						},
 					},
 					RawACL: ".*",
 				},
@@ -291,11 +315,13 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 			want: ACLs{
 				"implicit-admin": ACL{
 					Fullaccess: true,
-					LabelFilter: metricsql.LabelFilter{
-						Label:      "namespace",
-						Value:      ".*",
-						IsRegexp:   true,
-						IsNegative: false,
+					Metrics: map[string]metricsql.LabelFilter{
+						"namespace": {
+							Label:      "namespace",
+							Value:      ".*",
+							IsRegexp:   true,
+							IsNegative: false,
+						},
 					},
 					RawACL: ".*",
 				},
@@ -307,11 +333,13 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 			want: ACLs{
 				"multiple-values": ACL{
 					Fullaccess: false,
-					LabelFilter: metricsql.LabelFilter{
-						Label:      "namespace",
-						Value:      "ku.*|min.*",
-						IsRegexp:   true,
-						IsNegative: false,
+					Metrics: map[string]metricsql.LabelFilter{
+						"namespace": {
+							Label:      "namespace",
+							Value:      "ku.*|min.*",
+							IsRegexp:   true,
+							IsNegative: false,
+						},
 					},
 					RawACL: "ku.*, min.*",
 				},
@@ -323,11 +351,13 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 			want: ACLs{
 				"single-value": ACL{
 					Fullaccess: false,
-					LabelFilter: metricsql.LabelFilter{
-						Label:      "namespace",
-						Value:      "default",
-						IsRegexp:   false,
-						IsNegative: false,
+					Metrics: map[string]metricsql.LabelFilter{
+						"namespace": {
+							Label:      "namespace",
+							Value:      "default",
+							IsRegexp:   false,
+							IsNegative: false,
+						},
 					},
 					RawACL: "default",
 				},

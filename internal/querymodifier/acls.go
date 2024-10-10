@@ -5,10 +5,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/VictoriaMetrics/metricsql"
 	"gopkg.in/yaml.v3"
 )
 
-// ACLs stores a parsed YAML with role defitions
+// ACLs stores a parsed YAML with role definitions
 type ACLs map[string]ACL
 
 // rolesToRawACL returns a comma-separated list of ACL definitions for all specified roles. Basically, it lets you dynamically generate a raw ACL as if it was supplied through acl.yaml. To support Assumed Roles, unknown roles are treated as ACL definitions.
@@ -37,54 +38,6 @@ func (a ACLs) rolesToRawACL(roles []string) (string, error) {
 	return rawACL, nil
 }
 
-// GetUserACL takes a list of roles found in an OIDC claim and constructs and ACL based on them. If assumed roles are disabled, then only known roles (present in app.ACLs) are considered.
-func (a ACLs) GetUserACL(oidcRoles []string, assumedRolesEnabled bool) (ACL, error) {
-	roles := []string{}
-	assumedRoles := []string{}
-
-	for _, role := range oidcRoles {
-		_, exists := a[role]
-		if exists {
-			if a[role].Fullaccess {
-				return a[role], nil
-			}
-			roles = append(roles, role)
-		} else {
-			assumedRoles = append(assumedRoles, role)
-		}
-	}
-
-	if assumedRolesEnabled {
-		roles = append(roles, assumedRoles...)
-	}
-
-	if len(roles) == 0 {
-		return ACL{}, fmt.Errorf("no matching roles found")
-	}
-
-	// We can return a prebuilt ACL if there's only one role and it's known
-	if len(roles) == 1 {
-		role := roles[0]
-		acl, exists := a[role]
-		if exists {
-			return acl, nil
-		}
-	}
-
-	// To simplify creation of composite ACLs, we need to form a raw ACL, so the further process would be equal to what we have for processing acl.yaml
-	rawACL, err := a.rolesToRawACL(roles)
-	if err != nil {
-		return ACL{}, err
-	}
-
-	acl, err := NewACL(rawACL)
-	if err != nil {
-		return ACL{}, err
-	}
-
-	return acl, nil
-}
-
 // NewACLsFromFile loads ACL from a file or returns an empty ACLs instance if path is empty
 func NewACLsFromFile(path string) (ACLs, error) {
 	acls := make(ACLs)
@@ -98,21 +51,87 @@ func NewACLsFromFile(path string) (ACLs, error) {
 	if err != nil {
 		return ACLs{}, err
 	}
-	var aclYaml map[string]string
+
+	var aclYaml map[string]map[string]map[string]string
 
 	err = yaml.Unmarshal(yamlFile, &aclYaml)
 	if err != nil {
 		return ACLs{}, err
 	}
 
-	for role, rawACL := range aclYaml {
-		acl, err := NewACL(rawACL)
+	for role, roleData := range aclYaml {
+		rawACL, err := yaml.Marshal(roleData)
 		if err != nil {
-			return ACLs{}, err
+			return ACLs{}, fmt.Errorf("failed to marshal role data for %s: %w", role, err)
+		}
+
+		acl, err := NewACL(string(rawACL))
+		if err != nil {
+			return ACLs{}, fmt.Errorf("failed to create ACL for role %s: %w", role, err)
 		}
 
 		acls[role] = acl
 	}
 
 	return acls, nil
+}
+
+// GetUserACL takes a list of roles found in an OIDC claim and constructs an ACL based on them.
+// If assumed roles are disabled, then only known roles (present in app.ACLs) are considered.
+func (a ACLs) GetUserACL(oidcRoles []string, assumedRolesEnabled bool) (ACL, error) {
+	var combinedACL ACL
+	combinedACL.Metrics = make(map[string]metricsql.LabelFilter)
+
+	for _, role := range oidcRoles {
+		acl, exists := a[role]
+		if exists {
+			if acl.Fullaccess {
+				return acl, nil
+			}
+			for label, lf := range acl.Metrics {
+				if existingLF, ok := combinedACL.Metrics[label]; ok {
+					combinedACL.Metrics[label] = mergeLabelFilters(existingLF, lf)
+				} else {
+					combinedACL.Metrics[label] = lf
+				}
+			}
+		} else if assumedRolesEnabled {
+			assumedACL, err := NewACL(fmt.Sprintf("metrics:\n  namespace: %s", role))
+			if err != nil {
+				return ACL{}, fmt.Errorf("failed to create assumed ACL for role %s: %w", role, err)
+			}
+			for label, lf := range assumedACL.Metrics {
+				if existingLF, ok := combinedACL.Metrics[label]; ok {
+					combinedACL.Metrics[label] = mergeLabelFilters(existingLF, lf)
+				} else {
+					combinedACL.Metrics[label] = lf
+				}
+			}
+		}
+	}
+
+	if len(combinedACL.Metrics) == 0 {
+		return ACL{}, fmt.Errorf("no matching roles found")
+	}
+
+	combinedACL.Fullaccess = isFullAccess(combinedACL.Metrics)
+	return combinedACL, nil
+}
+
+// mergeLabelFilters combines two LabelFilters
+func mergeLabelFilters(lf1, lf2 metricsql.LabelFilter) metricsql.LabelFilter {
+	if lf1.IsRegexp || lf2.IsRegexp {
+		return metricsql.LabelFilter{
+			Label:      lf1.Label,
+			Value:      fmt.Sprintf("(%s)|(%s)", lf1.Value, lf2.Value),
+			IsRegexp:   true,
+			IsNegative: lf1.IsNegative && lf2.IsNegative,
+		}
+	}
+	return metricsql.LabelFilter{
+		Label:      lf1.Label,
+		Value:      fmt.Sprintf("%s|%s", lf1.Value, lf2.Value),
+		IsRegexp:   true,
+		IsNegative: lf1.IsNegative && lf2.IsNegative,
+	}
 }

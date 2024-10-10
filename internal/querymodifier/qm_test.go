@@ -31,7 +31,7 @@ func TestQueryModifier_GetModifiedEncodedURLValues(t *testing.T) {
 			"random": []string{"randomvalue"},
 		}
 
-		acl, err := NewACL("minio")
+		acl, err := NewACL("metrics: { namespace: 'minio' }")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -62,7 +62,7 @@ func TestQueryModifier_GetModifiedEncodedURLValues(t *testing.T) {
 			"match[]": []string{newQuery},
 		}
 
-		acl, err := NewACL("minio")
+		acl, err := NewACL("metrics: { namespace: 'minio' }")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -98,7 +98,7 @@ func TestQueryModifier_GetModifiedEncodedURLValues(t *testing.T) {
 			"match[]": []string{newQueryNotDeduplicated},
 		}
 
-		acl, err := NewACL("mini.*")
+		acl, err := NewACL("metrics: { namespace: 'mini.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -143,7 +143,7 @@ func TestQueryModifier_GetModifiedEncodedURLValues(t *testing.T) {
 			"match[]": []string{newQueryNotOptimized},
 		}
 
-		acl, err := NewACL("minio")
+		acl, err := NewACL("metrics: { namespace: 'minio' }")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -171,34 +171,41 @@ func TestQueryModifier_GetModifiedEncodedURLValues(t *testing.T) {
 func TestQueryModifier_modifyMetricExpr(t *testing.T) {
 	newACLPlain := ACL{
 		Fullaccess: false,
-		LabelFilter: metricsql.LabelFilter{
-			Label:      "namespace",
-			Value:      "default",
-			IsRegexp:   false,
-			IsNegative: false,
+		Metrics: map[string]metricsql.LabelFilter{
+			"namespace": {
+				Label:      "namespace",
+				Value:      "default",
+				IsRegexp:   false,
+				IsNegative: false,
+			},
 		},
 		RawACL: "default",
 	}
 
 	newACLPositiveRegexp := ACL{
 		Fullaccess: false,
-		LabelFilter: metricsql.LabelFilter{
-			Label:      "namespace",
-			Value:      "min.*|stolon",
-			IsRegexp:   true,
-			IsNegative: false,
+		Metrics: map[string]metricsql.LabelFilter{
+			"namespace": {
+				Label:      "namespace",
+				Value:      "min.*|stolon",
+				IsRegexp:   true,
+				IsNegative: false,
+			},
 		},
+
 		RawACL: "min.*, stolon",
 	}
 
 	// Technically, it's not really possible to create such ACL, but better to keep an eye on it anyway
 	newACLNegativeRegexp := ACL{
 		Fullaccess: false,
-		LabelFilter: metricsql.LabelFilter{
-			Label:      "namespace",
-			Value:      "min.*|stolon",
-			IsRegexp:   true,
-			IsNegative: true,
+		Metrics: map[string]metricsql.LabelFilter{
+			"namespace": {
+				Label:      "namespace",
+				Value:      "min.*|stolon",
+				IsRegexp:   true,
+				IsNegative: true,
+			},
 		},
 		RawACL: "min.*, stolon",
 	}
@@ -376,7 +383,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Not a regexp",
 			comment:       "Original expression should be modified, because the new filter is not a matching positive regexp",
-			rawACL:        "default",
+			rawACL:        "metrics: { namespace: 'default' }",
 			isNegativeACL: false,
 			filters:       filtersNonRegexp,
 			want:          false,
@@ -384,7 +391,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Positive non-matching complex regexp",
 			comment:       "Original expression should be modified, because the new filter doesn't match original filter",
-			rawACL:        "kube.*, control.*",
+			rawACL:        "metrics: { namespace: 'kube.*, control.*' }",
 			isNegativeACL: false,
 			filters:       filtersNonRegexp,
 			want:          false,
@@ -392,7 +399,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Positive non-matching simple regexp",
 			comment:       "Original expression should be modified, because the new filter doesn't match original filter",
-			rawACL:        "ini.*",
+			rawACL:        "metrics: { namespace: 'ini.*' }",
 			isNegativeACL: false,
 			filters:       filtersNonRegexp,
 			want:          false,
@@ -401,7 +408,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Negative non-matching complex regexp",
 			comment:       "Original expression should be modified, because the new filter is not a matching positive regexp",
-			rawACL:        "kube.*, control.*",
+			rawACL:        "metrics: { namespace: 'kube.*, control.*' }",
 			isNegativeACL: true,
 			filters:       filtersNonRegexp,
 			want:          false,
@@ -409,7 +416,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Negative non-matching simple regexp",
 			comment:       "Original expression should be modified, because the new filter is not a matching positive regexp",
-			rawACL:        "ini.*",
+			rawACL:        "metrics: { namespace: 'ini.*' }",
 			isNegativeACL: true,
 			filters:       filtersNonRegexp,
 			want:          false,
@@ -417,7 +424,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Negative matching complex regexp",
 			comment:       "Original expression should be modified, because the new filter is not a matching positive regexp",
-			rawACL:        "min.*, control.*",
+			rawACL:        "metrics: { namespace: 'min.*, control.*' }",
 			isNegativeACL: true,
 			filters:       filtersNonRegexp,
 			want:          false,
@@ -426,7 +433,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "No filters",
 			comment:       "Original expression should be modified, because the list with original filters is empty",
-			rawACL:        "min.*, control.*",
+			rawACL:        "metrics: { namespace: 'min.*, control.*' }",
 			isNegativeACL: false,
 			filters:       []metricsql.LabelFilter{},
 			want:          false,
@@ -434,7 +441,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Original filters do not contain target label",
 			comment:       "Original expression should be modified, because the original filters do not contain the target label",
-			rawACL:        "min.*, control.*",
+			rawACL:        "metrics: { namespace: 'min.*, control.*' }",
 			isNegativeACL: false,
 			filters:       filtersNoTargetLabel,
 			want:          false,
@@ -442,7 +449,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Original filter is a negative non-regexp, ACL is a regexp",
 			comment:       "Original expression should be modified, because it is a negative non-regexp",
-			rawACL:        "min.*",
+			rawACL:        "metrics: { namespace: 'min.*' }",
 			isNegativeACL: false,
 			filters:       filtersNegativeNonRegexp,
 			want:          false,
@@ -450,7 +457,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Original filter is a negative non-regexp, ACL is not a regexp",
 			comment:       "Original expression should be modified, because it is a negative non-regexp",
-			rawACL:        "minio",
+			rawACL:        "metrics: { namespace: 'minio' }",
 			isNegativeACL: false,
 			filters:       filtersNegativeNonRegexp,
 			want:          false,
@@ -458,7 +465,7 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 		{
 			name:          "Original filter is a regexp and not a subfilter of the new ACL",
 			comment:       "Original expression should be modified, because the original filter is a regexp and not a subfilter of the new ACL",
-			rawACL:        "min.*, control.*",
+			rawACL:        "metrics: { namespace: 'min.*, control.*' }",
 			isNegativeACL: false,
 			filters: []metricsql.LabelFilter{
 				{
@@ -482,13 +489,15 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			if tt.isNegativeACL {
 				// 1. NewACL cannot produce negative ACLs
 				// 2. Cannot convert non-regexp to a negative regexp
-				if qm.ACL.LabelFilter.IsNegative || !qm.ACL.LabelFilter.IsRegexp {
+				if qm.ACL.Metrics["namespace"].IsNegative || !qm.ACL.Metrics["namespace"].IsRegexp {
 					t.Fatal("Incorrect test data")
 				}
-				qm.ACL.LabelFilter.IsNegative = tt.isNegativeACL
+				filter := qm.ACL.Metrics["namespace"]
+				filter.IsNegative = tt.isNegativeACL
+				qm.ACL.Metrics["namespace"] = filter
 			}
 
-			got := qm.shouldNotBeModified(tt.filters)
+			got := qm.shouldNotBeModified(tt.filters, "namepsace")
 			assert.Equal(t, tt.want, got, tt.comment)
 		})
 	}
@@ -509,13 +518,13 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			},
 		}
 
-		qm, err := NewQueryModifier("mini.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'mini.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := false
-		got := qm.shouldNotBeModified(filters)
+		got := qm.shouldNotBeModified(filters, "namepsace")
 		assert.Equal(t, want, got, "Original expression should be modified, because the original filters contain regexp filters, which are not subfilters of the new filter")
 	})
 
@@ -535,13 +544,13 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			},
 		}
 
-		qm, err := NewQueryModifier("min.*, control.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'min.*, control.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := false
-		got := qm.shouldNotBeModified(filters)
+		got := qm.shouldNotBeModified(filters, "namespace")
 		assert.Equal(t, want, got, "Original expression should be modified, because the original filters are regexps, one of which is not a subfilter of the new filter")
 	})
 
@@ -561,26 +570,26 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			},
 		}
 
-		qm, err := NewQueryModifier("mini.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'mini.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := false
-		got := qm.shouldNotBeModified(filters)
+		got := qm.shouldNotBeModified(filters, "namespace")
 		assert.Equal(t, want, got, "Original expression should be modified, because amongst the original filters with the same label (regexp, non-regexp) there is a regexp, which is not a subfilter of the new filter")
 	})
 
 	// Matching cases
 
 	t.Run("Original filter is not a regexp, new filter matches", func(t *testing.T) {
-		qm, err := NewQueryModifier("min.*, control.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'min.*, control.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := true
-		got := qm.shouldNotBeModified(filtersNonRegexp)
+		got := qm.shouldNotBeModified(filtersNonRegexp, "namespace")
 		assert.Equal(t, want, got, "Original expression should NOT be modified, because the original filter is not a regexp and the new filter is a matching positive regexp")
 	})
 
@@ -594,13 +603,13 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			},
 		}
 
-		qm, err := NewQueryModifier("min.*, control.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'min.*, control.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := true
-		got := qm.shouldNotBeModified(filters)
+		got := qm.shouldNotBeModified(filters, "namespace")
 		assert.Equal(t, want, got, "Original expression should NOT be modified, because the original filter is a fake positive regexp (it doesn't contain any special characters, should have been a non-regexp expression, e.g. namespace=~\"kube-system\") and the new filter is a matching positive regexp")
 	})
 
@@ -614,13 +623,13 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			},
 		}
 
-		qm, err := NewQueryModifier("min.*, control.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'min.*, control.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := true
-		got := qm.shouldNotBeModified(filters)
+		got := qm.shouldNotBeModified(filters, "namespace")
 		assert.Equal(t, want, got, "Original expression should NOT be modified, because the original filter is a regexp subfilter of the ACL")
 	})
 
@@ -640,13 +649,13 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			},
 		}
 
-		qm, err := NewQueryModifier("min.*, control.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'min.*, control.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := true
-		got := qm.shouldNotBeModified(filters)
+		got := qm.shouldNotBeModified(filters, "namespace")
 		assert.Equal(t, want, got, "Original expression should NOT be modified, because the original filters are subfilters of the new filter")
 	})
 
@@ -666,13 +675,13 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			},
 		}
 
-		qm, err := NewQueryModifier("mini.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'mini.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := true
-		got := qm.shouldNotBeModified(filters)
+		got := qm.shouldNotBeModified(filters, "namespace")
 		assert.Equal(t, want, got, "Original expression should NOT be modified, because the original filter contains the same non-regexp label filter multiple times and the new filter matches")
 	})
 
@@ -692,13 +701,13 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			},
 		}
 
-		qm, err := NewQueryModifier("mini.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'mini.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := true
-		got := qm.shouldNotBeModified(filters)
+		got := qm.shouldNotBeModified(filters, "namespace")
 		assert.Equal(t, want, got, "Original expression should NOT be modified, because original filters contain a mix of a fake regexp and a non-regexp filters (basically, they're equal in results)")
 	})
 
@@ -712,24 +721,24 @@ func TestQueryModifier_shouldNotBeModified(t *testing.T) {
 			},
 		}
 
-		qm, err := NewQueryModifier("min.*")
+		qm, err := NewQueryModifier("metrics: { namespace: 'min.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := true
-		got := qm.shouldNotBeModified(filters)
+		got := qm.shouldNotBeModified(filters, "namespace")
 		assert.Equal(t, want, got, "Original expression should NOT be modified, because original filter and the new filter contain the same regexp")
 	})
 
 	t.Run("The new filter gives full access", func(t *testing.T) {
-		qm, err := NewQueryModifier(".*")
+		qm, err := NewQueryModifier("metrics: { namespace: '.*' }")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		want := true
-		got := qm.shouldNotBeModified(filtersNoTargetLabel)
+		got := qm.shouldNotBeModified(filtersNoTargetLabel, "namespace")
 		assert.Equal(t, want, got, "Original expression should NOT be modified, because the new filter gives full access")
 	})
 }
