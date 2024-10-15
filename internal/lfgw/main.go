@@ -153,9 +153,9 @@ func (app *application) configureACLs() {
 	}
 
 	for role, acl := range app.ACLs {
-		for _, filter := range acl.Metrics {
+		for label, filter := range acl.Metrics {
 			app.logger.Info().Caller().
-				Msgf("Loaded role definition for %s: %q (converted to %s)", role, acl.RawACL, filter.AppendString(nil))
+				Msgf("Loaded role definition for %s: %q (converted to %s)", role, acl.MetricsMeta[label].RawACL, filter.AppendString(nil))
 		}
 	}
 }

@@ -170,7 +170,6 @@ func TestQueryModifier_GetModifiedEncodedURLValues(t *testing.T) {
 
 func TestQueryModifier_modifyMetricExpr(t *testing.T) {
 	newACLPlain := ACL{
-		Fullaccess: false,
 		Metrics: map[string]metricsql.LabelFilter{
 			"namespace": {
 				Label:      "namespace",
@@ -179,11 +178,15 @@ func TestQueryModifier_modifyMetricExpr(t *testing.T) {
 				IsNegative: false,
 			},
 		},
-		RawACL: "default",
+		MetricsMeta: map[string]LabelFilterData{
+			"namespace": {
+				Fullaccess: false,
+				RawACL:     "default",
+			},
+		},
 	}
 
 	newACLPositiveRegexp := ACL{
-		Fullaccess: false,
 		Metrics: map[string]metricsql.LabelFilter{
 			"namespace": {
 				Label:      "namespace",
@@ -193,12 +196,16 @@ func TestQueryModifier_modifyMetricExpr(t *testing.T) {
 			},
 		},
 
-		RawACL: "min.*, stolon",
+		MetricsMeta: map[string]LabelFilterData{
+			"namespace": {
+				Fullaccess: false,
+				RawACL:     "min.*, stolon",
+			},
+		},
 	}
 
 	// Technically, it's not really possible to create such ACL, but better to keep an eye on it anyway
 	newACLNegativeRegexp := ACL{
-		Fullaccess: false,
 		Metrics: map[string]metricsql.LabelFilter{
 			"namespace": {
 				Label:      "namespace",
@@ -207,7 +214,12 @@ func TestQueryModifier_modifyMetricExpr(t *testing.T) {
 				IsNegative: true,
 			},
 		},
-		RawACL: "min.*, stolon",
+		MetricsMeta: map[string]LabelFilterData{
+			"namespace": {
+				Fullaccess: false,
+				RawACL:     "min.*, stolon",
+			},
+		},
 	}
 
 	tests := []struct {

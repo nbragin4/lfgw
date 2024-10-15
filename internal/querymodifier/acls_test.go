@@ -11,7 +11,6 @@ import (
 func TestACL_rolesToRawACL(t *testing.T) {
 	a := ACLs{
 		"admin": ACL{
-			Fullaccess: true,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -20,10 +19,14 @@ func TestACL_rolesToRawACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: ".*",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: true,
+					RawACL:     ".*",
+				},
+			},
 		},
 		"multiple-values": ACL{
-			Fullaccess: false,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -32,10 +35,14 @@ func TestACL_rolesToRawACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: "ku.*, min.*",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: false,
+					RawACL:     "ku.*, min.*",
+				},
+			},
 		},
 		"single-value": ACL{
-			Fullaccess: false,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -44,13 +51,18 @@ func TestACL_rolesToRawACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: "default",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: false,
+					RawACL:     "default",
+				},
+			},
 		},
 	}
 
 	t.Run("0 roles", func(t *testing.T) {
 		roles := []string{}
-		_, err := a.rolesToRawACL(roles)
+		_, err := a.rolesToRawACL(roles, "namespace", true)
 		assert.NotNil(t, err)
 	})
 
@@ -58,7 +70,7 @@ func TestACL_rolesToRawACL(t *testing.T) {
 		roles := []string{"multiple-values"}
 		want := "ku.*, min.*"
 
-		got, err := a.rolesToRawACL(roles)
+		got, err := a.rolesToRawACL(roles, "namespace", true)
 		assert.Nil(t, err)
 		assert.Equal(t, want, got)
 	})
@@ -67,7 +79,7 @@ func TestACL_rolesToRawACL(t *testing.T) {
 		roles := []string{"multiple-values", "single-value"}
 		want := "ku.*, min.*, default"
 
-		got, err := a.rolesToRawACL(roles)
+		got, err := a.rolesToRawACL(roles, "namespace", true)
 		assert.Nil(t, err)
 		assert.Equal(t, want, got)
 	})
@@ -79,7 +91,7 @@ func TestACL_rolesToRawACL(t *testing.T) {
 
 		roles := []string{"empty-acl"}
 
-		_, err := a.rolesToRawACL(roles)
+		_, err := a.rolesToRawACL(roles, "namespace", true)
 		assert.NotNil(t, err)
 	})
 }
@@ -87,7 +99,6 @@ func TestACL_rolesToRawACL(t *testing.T) {
 func TestACL_GetUserACL(t *testing.T) {
 	a := ACLs{
 		"admin": ACL{
-			Fullaccess: true,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -96,10 +107,14 @@ func TestACL_GetUserACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: ".*",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: true,
+					RawACL:     ".*",
+				},
+			},
 		},
 		"multiple-values": ACL{
-			Fullaccess: false,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -108,10 +123,14 @@ func TestACL_GetUserACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: "ku.*, min.*",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: false,
+					RawACL:     "ku.*, min.*",
+				},
+			},
 		},
 		"single-value": ACL{
-			Fullaccess: false,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -120,7 +139,12 @@ func TestACL_GetUserACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: "default",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: false,
+					RawACL:     "default",
+				},
+			},
 		},
 	}
 
@@ -157,11 +181,10 @@ func TestACL_GetUserACL(t *testing.T) {
 		roles := []string{"single-value", "multiple-values", "unknown-role"}
 		knownRoles := []string{"single-value", "multiple-values"}
 
-		rawACL, err := a.rolesToRawACL(knownRoles)
+		rawACL, err := a.rolesToRawACL(knownRoles, "namespace", true)
 		assert.Nil(t, err)
 
 		want := ACL{
-			Fullaccess: false,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -170,7 +193,12 @@ func TestACL_GetUserACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: rawACL,
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: false,
+					RawACL:     rawACL,
+				},
+			},
 		}
 
 		got, err := a.GetUserACL(roles, false)
@@ -183,7 +211,6 @@ func TestACL_GetUserACL(t *testing.T) {
 		roles := []string{"unknown-role"}
 
 		want := ACL{
-			Fullaccess: false,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -192,7 +219,12 @@ func TestACL_GetUserACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: "unknown-role",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: false,
+					RawACL:     "unknown-role",
+				},
+			},
 		}
 
 		got, err := a.GetUserACL(roles, true)
@@ -204,7 +236,6 @@ func TestACL_GetUserACL(t *testing.T) {
 		roles := []string{"multiple-values", "single-value", "unknown-role"}
 
 		want := ACL{
-			Fullaccess: false,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -213,7 +244,12 @@ func TestACL_GetUserACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: "ku.*, min.*, default, unknown-role",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: false,
+					RawACL:     "ku.*, min.*, default, unknown-role",
+				},
+			},
 		}
 
 		got, err := a.GetUserACL(roles, true)
@@ -226,7 +262,6 @@ func TestACL_GetUserACL(t *testing.T) {
 	// 	roles := []string{"multiple-values", "single-value", "unknown-role1|unknown-role2"}
 
 	// 	want := ACL{
-	// 		Fullaccess: false,
 	// 		LabelFilter: metricsql.LabelFilter{
 	// 			Label:      "namespace",
 	// 			Value:      "ku.*|min.*|default|unknown-role1|unknown-role2",
@@ -234,6 +269,7 @@ func TestACL_GetUserACL(t *testing.T) {
 	// 			IsNegative: false,
 	// 		},
 	// 		// TODO: should it be left like this? Or better to split?
+	// 		Fullaccess: false,
 	// 		RawACL: "ku.*, min.*, default, unknown-role1|unknown-role2",
 	// 	}
 
@@ -246,7 +282,6 @@ func TestACL_GetUserACL(t *testing.T) {
 		roles := []string{"multiple-values", "single-value", "unknown-role1, unknown-role2"}
 
 		want := ACL{
-			Fullaccess: false,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -255,7 +290,12 @@ func TestACL_GetUserACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: "ku.*, min.*, default, unknown-role1, unknown-role2",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: false,
+					RawACL:     "ku.*, min.*, default, unknown-role1, unknown-role2",
+				},
+			},
 		}
 
 		got, err := a.GetUserACL(roles, true)
@@ -267,7 +307,6 @@ func TestACL_GetUserACL(t *testing.T) {
 		roles := []string{"multiple-values", "admin", "unknown-role"}
 
 		want := ACL{
-			Fullaccess: true,
 			Metrics: map[string]metricsql.LabelFilter{
 				"namespace": {
 					Label:      "namespace",
@@ -276,7 +315,12 @@ func TestACL_GetUserACL(t *testing.T) {
 					IsNegative: false,
 				},
 			},
-			RawACL: ".*",
+			MetricsMeta: map[string]LabelFilterData{
+				"namespace": {
+					Fullaccess: true,
+					RawACL:     ".*",
+				},
+			},
 		}
 
 		got, err := a.GetUserACL(roles, true)
@@ -293,10 +337,9 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 	}{
 		{
 			name:    "admin",
-			content: "admin: .*",
+			content: "admin: { metrics: { namespace: '.*' }}",
 			want: ACLs{
 				"admin": ACL{
-					Fullaccess: true,
 					Metrics: map[string]metricsql.LabelFilter{
 						"namespace": {
 							Label:      "namespace",
@@ -305,16 +348,20 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 							IsNegative: false,
 						},
 					},
-					RawACL: ".*",
+					MetricsMeta: map[string]LabelFilterData{
+						"namespace": {
+							Fullaccess: true,
+							RawACL:     ".*",
+						},
+					},
 				},
 			},
 		},
 		{
 			name:    "implicit-admin",
-			content: `implicit-admin: ku.*, .*, min.*`,
+			content: `implicit-admin: { metrics: { namespace: 'ku.*, .*, min.*' }}`,
 			want: ACLs{
 				"implicit-admin": ACL{
-					Fullaccess: true,
 					Metrics: map[string]metricsql.LabelFilter{
 						"namespace": {
 							Label:      "namespace",
@@ -323,16 +370,20 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 							IsNegative: false,
 						},
 					},
-					RawACL: ".*",
+					MetricsMeta: map[string]LabelFilterData{
+						"namespace": {
+							Fullaccess: true,
+							RawACL:     ".*",
+						},
+					},
 				},
 			},
 		},
 		{
 			name:    "multiple-values",
-			content: "multiple-values: ku.*, min.*",
+			content: "multiple-values: { metrics: { namespace: 'ku.*, min.*' }}",
 			want: ACLs{
 				"multiple-values": ACL{
-					Fullaccess: false,
 					Metrics: map[string]metricsql.LabelFilter{
 						"namespace": {
 							Label:      "namespace",
@@ -341,16 +392,20 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 							IsNegative: false,
 						},
 					},
-					RawACL: "ku.*, min.*",
+					MetricsMeta: map[string]LabelFilterData{
+						"namespace": {
+							Fullaccess: false,
+							RawACL:     "ku.*,min.*",
+						},
+					},
 				},
 			},
 		},
 		{
 			name:    "single-value",
-			content: "single-value: default",
+			content: "single-value: { metrics: { namespace: 'default' }}",
 			want: ACLs{
 				"single-value": ACL{
-					Fullaccess: false,
 					Metrics: map[string]metricsql.LabelFilter{
 						"namespace": {
 							Label:      "namespace",
@@ -359,7 +414,12 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 							IsNegative: false,
 						},
 					},
-					RawACL: "default",
+					MetricsMeta: map[string]LabelFilterData{
+						"namespace": {
+							Fullaccess: false,
+							RawACL:     "default",
+						},
+					},
 				},
 			},
 		},
@@ -387,11 +447,11 @@ func TestACL_NewACLsFromFile(t *testing.T) {
 	})
 
 	t.Run("incorrect ACL", func(t *testing.T) {
-		saveACLToFile(t, f, "test-role:")
+		saveACLToFile(t, f, "test-role:\n  metrics:\n    namespace: ")
 		_, err := NewACLsFromFile(f.Name())
 		assert.NotNil(t, err)
 
-		saveACLToFile(t, f, "test-role: a b")
+		saveACLToFile(t, f, "test-role:\n  metrics:\n    namespace: 'a b'")
 		_, err = NewACLsFromFile(f.Name())
 		assert.NotNil(t, err)
 	})

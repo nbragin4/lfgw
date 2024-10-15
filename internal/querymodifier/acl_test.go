@@ -18,7 +18,6 @@ func Test_NewACL(t *testing.T) {
 			name:   ".* (full access)",
 			rawACL: "metrics: { namespace: '.*' }",
 			want: ACL{
-				Fullaccess: true,
 				Metrics: map[string]metricsql.LabelFilter{
 					"namespace": {
 						Label:      "namespace",
@@ -27,7 +26,12 @@ func Test_NewACL(t *testing.T) {
 						IsNegative: false,
 					},
 				},
-				RawACL: "metrics: { namespace: '.*' }",
+				MetricsMeta: map[string]LabelFilterData{
+					"namespace": {
+						Fullaccess: true,
+						RawACL:     ".*",
+					},
+				},
 			},
 			fail: false,
 		},
@@ -35,7 +39,6 @@ func Test_NewACL(t *testing.T) {
 			name:   "min.*, .*, stolon (implicit full access, same as .*)",
 			rawACL: "metrics: { namespace: 'min.*, .*, stolon' }",
 			want: ACL{
-				Fullaccess: true,
 				Metrics: map[string]metricsql.LabelFilter{
 					"namespace": {
 						Label:      "namespace",
@@ -44,7 +47,12 @@ func Test_NewACL(t *testing.T) {
 						IsNegative: false,
 					},
 				},
-				RawACL: "metrics: { namespace: '.*' }",
+				MetricsMeta: map[string]LabelFilterData{
+					"namespace": {
+						Fullaccess: true,
+						RawACL:     ".*",
+					},
+				},
 			},
 			fail: false,
 		},
@@ -52,7 +60,6 @@ func Test_NewACL(t *testing.T) {
 			name:   "minio (only minio)",
 			rawACL: "metrics: { namespace: 'minio' }",
 			want: ACL{
-				Fullaccess: false,
 				Metrics: map[string]metricsql.LabelFilter{
 					"namespace": {
 						Label:      "namespace",
@@ -60,7 +67,12 @@ func Test_NewACL(t *testing.T) {
 						IsRegexp:   false,
 						IsNegative: false,
 					}},
-				RawACL: "metrics: { namespace: 'minio' }",
+				MetricsMeta: map[string]LabelFilterData{
+					"namespace": {
+						Fullaccess: false,
+						RawACL:     "minio",
+					},
+				},
 			},
 			fail: false,
 		},
@@ -68,7 +80,6 @@ func Test_NewACL(t *testing.T) {
 			name:   "min.* (one regexp)",
 			rawACL: "metrics: { namespace: 'min.*' }",
 			want: ACL{
-				Fullaccess: false,
 				Metrics: map[string]metricsql.LabelFilter{
 					"namespace": {
 						Label:      "namespace",
@@ -77,7 +88,12 @@ func Test_NewACL(t *testing.T) {
 						IsNegative: false,
 					},
 				},
-				RawACL: "metrics: { namespace: 'min.*' }",
+				MetricsMeta: map[string]LabelFilterData{
+					"namespace": {
+						Fullaccess: false,
+						RawACL:     "min.*",
+					},
+				},
 			},
 			fail: false,
 		},
@@ -85,7 +101,6 @@ func Test_NewACL(t *testing.T) {
 			name:   "min.* (one anchored regexp)",
 			rawACL: "metrics: { namespace: '^(min.*)$' }",
 			want: ACL{
-				Fullaccess: false,
 				Metrics: map[string]metricsql.LabelFilter{
 					"namespace": {
 						Label:      "namespace",
@@ -93,7 +108,12 @@ func Test_NewACL(t *testing.T) {
 						IsRegexp:   true,
 						IsNegative: false,
 					}},
-				RawACL: "metrics: { namespace: 'min.*' }",
+				MetricsMeta: map[string]LabelFilterData{
+					"namespace": {
+						Fullaccess: false,
+						RawACL:     "min.*",
+					},
+				},
 			},
 			fail: false,
 		},
@@ -101,7 +121,6 @@ func Test_NewACL(t *testing.T) {
 			name:   "minio, stolon (two namespaces)",
 			rawACL: "metrics: { namespace: 'minio, stolon' }",
 			want: ACL{
-				Fullaccess: false,
 				Metrics: map[string]metricsql.LabelFilter{
 					"namespace": {
 						Label:      "namespace",
@@ -110,7 +129,12 @@ func Test_NewACL(t *testing.T) {
 						IsNegative: false,
 					},
 				},
-				RawACL: "metrics: { namespace: 'minio, stolon' }",
+				MetricsMeta: map[string]LabelFilterData{
+					"namespace": {
+						Fullaccess: false,
+						RawACL:     "minio,stolon",
+					},
+				},
 			},
 			fail: false,
 		},
@@ -118,7 +142,6 @@ func Test_NewACL(t *testing.T) {
 			name:   "min.*, stolon (regexp and non-regexp)",
 			rawACL: "metrics: { namespace: 'min.*, stolon' }",
 			want: ACL{
-				Fullaccess: false,
 				Metrics: map[string]metricsql.LabelFilter{
 					"namespace": {
 						Label:      "namespace",
@@ -126,7 +149,12 @@ func Test_NewACL(t *testing.T) {
 						IsRegexp:   true,
 						IsNegative: false,
 					}},
-				RawACL: "metrics: { namespace: 'min.*, stolon' }",
+				MetricsMeta: map[string]LabelFilterData{
+					"namespace": {
+						Fullaccess: false,
+						RawACL:     "min.*,stolon",
+					},
+				},
 			},
 			fail: false,
 		},
@@ -135,7 +163,6 @@ func Test_NewACL(t *testing.T) {
 			name:   ".+ (is a regexp)",
 			rawACL: "metrics: { namespace: '.+' }",
 			want: ACL{
-				Fullaccess: false,
 				Metrics: map[string]metricsql.LabelFilter{
 					"namespace": {
 						Label:      "namespace",
@@ -144,7 +171,12 @@ func Test_NewACL(t *testing.T) {
 						IsNegative: false,
 					},
 				},
-				RawACL: "metrics: { namespace: '.+' }",
+				MetricsMeta: map[string]LabelFilterData{
+					"namespace": {
+						Fullaccess: false,
+						RawACL:     ".+",
+					},
+				},
 			},
 			fail: false,
 		},
@@ -152,7 +184,6 @@ func Test_NewACL(t *testing.T) {
 			name:   "a,b (is a correct regexp)",
 			rawACL: "metrics: { namespace: 'a,b' }",
 			want: ACL{
-				Fullaccess: false,
 				Metrics: map[string]metricsql.LabelFilter{
 					"namespace": {
 						Label:      "namespace",
@@ -161,7 +192,12 @@ func Test_NewACL(t *testing.T) {
 						IsNegative: false,
 					},
 				},
-				RawACL: "metrics: { namespace: 'a,b' }",
+				MetricsMeta: map[string]LabelFilterData{
+					"namespace": {
+						Fullaccess: false,
+						RawACL:     "a,b",
+					},
+				},
 			},
 			fail: false,
 		},

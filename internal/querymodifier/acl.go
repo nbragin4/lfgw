@@ -12,11 +12,17 @@ import (
 // RegexpSymbols is used to determine whether ACL definition is a regexp or whether LF contains a fake regexp
 const RegexpSymbols = `.+*?^$()[]{}|\`
 
+type LabelFilterData struct {
+	Fullaccess bool
+	RawACL     string
+}
+
 // ACL stores a role definition
 type ACL struct {
-	Fullaccess bool
-	Metrics    map[string]metricsql.LabelFilter `json:"metrics"`
-	RawACL     string
+	// Fullaccess  bool
+	Metrics     map[string]metricsql.LabelFilter `json:"metrics"`
+	MetricsMeta map[string]LabelFilterData
+	// RawACL      string
 }
 
 // NewACL returns an ACL based on a YAML definition
@@ -31,16 +37,55 @@ func NewACL(rawACL string) (ACL, error) {
 	}
 
 	acl := ACL{
-		Metrics: make(map[string]metricsql.LabelFilter),
-		RawACL:  rawACL,
+		Metrics:     make(map[string]metricsql.LabelFilter),
+		MetricsMeta: make(map[string]LabelFilterData),
 	}
 
 	for label, value := range aclDef.Metrics {
+		buffer, err := toSlice(value)
 		lf := metricsql.LabelFilter{
 			Label:      label,
 			Value:      value,
 			IsRegexp:   strings.ContainsAny(value, RegexpSymbols),
 			IsNegative: false,
+		}
+
+		if err != nil {
+			return ACL{}, err
+		}
+		fullaccess := false
+		// If .* is in the slice, then we can omit any other value
+		for _, v := range buffer {
+			// TODO: move to a helper?
+			if v == ".*" {
+				// Note: with this approach, we intentionally omit other values in the resulting ACL
+				lf.Value = v
+				fullaccess = true
+			}
+		}
+		if fullaccess {
+			acl.Metrics[label] = lf
+			acl.MetricsMeta[label] = LabelFilterData{
+				Fullaccess: isFullAccess(lf),
+				RawACL:     lf.Value,
+			}
+			continue
+		}
+		if len(buffer) == 1 {
+			// TODO: move to a helper?
+			if strings.ContainsAny(buffer[0], RegexpSymbols) {
+				lf.IsRegexp = true
+				// Trim anchors as they're not needed for Prometheus, and not expected in the app.shouldBeModified function
+				buffer[0] = strings.TrimLeft(buffer[0], "^")
+				buffer[0] = strings.TrimLeft(buffer[0], "(")
+				buffer[0] = strings.TrimRight(buffer[0], "$")
+				buffer[0] = strings.TrimRight(buffer[0], ")")
+			}
+			lf.Value = buffer[0]
+		} else {
+			// "Regex matches are fully anchored. A match of env=~"foo" is treated as env=~"^foo$"." https://prometheus.io/docs/prometheus/latest/querying/basics/
+			lf.Value = strings.Join(buffer, "|")
+			lf.IsRegexp = true
 		}
 
 		if lf.IsRegexp {
@@ -55,23 +100,19 @@ func NewACL(rawACL string) (ACL, error) {
 				return ACL{}, fmt.Errorf("invalid regex for label %s: %w", label, err)
 			}
 		}
-
 		acl.Metrics[label] = lf
+		acl.MetricsMeta[label] = LabelFilterData{
+			Fullaccess: isFullAccess(lf),
+			RawACL:     strings.Join(buffer, ","),
+		}
 	}
-
-	acl.Fullaccess = isFullAccess(acl.Metrics)
 
 	return acl, nil
 }
 
 // isFullAccess checks if the ACL grants full access
-func isFullAccess(metrics map[string]metricsql.LabelFilter) bool {
-	for _, lf := range metrics {
-		if lf.Value == ".*" {
-			return true
-		}
-	}
-	return false
+func isFullAccess(lf metricsql.LabelFilter) bool {
+	return lf.Value == ".*"
 }
 
 // ToLabelFilters converts the ACL's metrics to metricsql.LabelFilter slice

@@ -78,31 +78,45 @@ func (qm *QueryModifier) modifyMetricExpr(expr metricsql.Expr) metricsql.Expr {
 
 // shouldNotBeModified helps to understand whether the original label filters have to be modified.
 func (qm *QueryModifier) shouldNotBeModified(filters []metricsql.LabelFilter, label string) bool {
-	if qm.ACL.Fullaccess {
+	fullaccess := true
+	for _, metadata := range qm.ACL.MetricsMeta {
+		if !metadata.Fullaccess {
+			fullaccess = false
+		}
+	}
+	if fullaccess {
 		return true
 	}
-
 	seen := 0
 	seenUnmodified := 0
 
-	acl := qm.ACL.Metrics[label]
+	// TODO: move to a map? Might not be worth doing as filters of the same type are unlikely
+	newLF := qm.ACL.Metrics[label]
+	rawSubACLs := strings.Split(string(newLF.Value), "|")
 
 	for _, filter := range filters {
-		if filter.Label == label && !filter.IsNegative && acl.IsRegexp && !acl.IsNegative {
+		// For filter, only positive regexps and non-regexps considered, for newLF - positive regexps.
+		if filter.Label == newLF.Label && !filter.IsNegative && newLF.IsRegexp && !newLF.IsNegative {
 			seen++
 
+			// Target: non-regexps or fake regexps
 			if !filter.IsRegexp || isFakePositiveRegexp(filter) {
-				re, err := metricsql.CompileRegexpAnchored(acl.Value)
+				// Prometheus treats all regexp queries as anchored, whereas our raw regexp doesn't have them. So, we should take anchored values.
+				re, err := metricsql.CompileRegexpAnchored(newLF.Value)
+				// There shouldn't be any errors, though, just in case, better to skip deduplication
 				if err == nil && re.MatchString(filter.Value) {
 					seenUnmodified++
 					continue
 				}
 			}
 
+			// Target: both are positive regexps, filter is a subfilter of the newLF or has the same value
 			if filter.IsRegexp {
-				if filter.Value == acl.Value {
-					seenUnmodified++
-					continue
+				for _, rawSubACL := range rawSubACLs {
+					if filter.Value == rawSubACL {
+						seenUnmodified++
+						continue
+					}
 				}
 			}
 		}

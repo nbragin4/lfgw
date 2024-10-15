@@ -268,10 +268,10 @@ func Test_oidcMiddleware(t *testing.T) {
 	}
 
 	// Prepare ACLs
-	aclAdmin, err := querymodifier.NewACL(".*")
+	aclAdmin, err := querymodifier.NewACL("metrics:\n  namespace: '.*'\n")
 	assert.Nil(t, err)
 
-	aclEditor, err := querymodifier.NewACL("monitoring")
+	aclEditor, err := querymodifier.NewACL("metrics:\n  namespace: 'monitoring'\n")
 	assert.Nil(t, err)
 
 	acls := querymodifier.ACLs{
@@ -543,7 +543,7 @@ func Test_rewriteRequestMiddleware(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		acl, err := querymodifier.NewACL("metrics: { namespace: 'monitoring' }")
+		acl, err := querymodifier.NewACL("metrics:\n  namespace: 'monitoring'\n")
 		assert.Nil(t, err)
 
 		ctx := context.WithValue(r.Context(), contextKeyACL, acl)
@@ -578,7 +578,7 @@ func Test_rewriteRequestMiddleware(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		acl, err := querymodifier.NewACL(".*")
+		acl, err := querymodifier.NewACL("metrics:\n  namespace: '.*'")
 		assert.Nil(t, err)
 
 		ctx := context.WithValue(r.Context(), contextKeyACL, acl)
@@ -615,7 +615,7 @@ func Test_rewriteRequestMiddleware(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		acl, err := querymodifier.NewACL("monitoring")
+		acl, err := querymodifier.NewACL("metrics:\n  namespace: 'monitoring'\n")
 		assert.Nil(t, err)
 
 		ctx := context.WithValue(r.Context(), contextKeyACL, acl)
@@ -663,7 +663,7 @@ func Test_rewriteRequestMiddleware(t *testing.T) {
 		// Requests of a different type are not decoded by r.ParseForm()
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		acl, err := querymodifier.NewACL("monitoring")
+		acl, err := querymodifier.NewACL("metrics:\n  namespace: 'monitoring'\n")
 		assert.Nil(t, err)
 
 		ctx := context.WithValue(r.Context(), contextKeyACL, acl)
