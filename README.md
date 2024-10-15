@@ -77,12 +77,24 @@ role: namespace, namespace2
 For example:
 
 ```yaml
-team0: .*                # all metrics
-team1: min.*, .*, stolon # all metrics, it's the same as .*
-team2: minio             # only those with namespace="minio"
-team3: min.*             # only those matching namespace=~"min.*"
-team4: minio, stolon     # only those matching namespace=~"minio|stolon"
-team5: min.*, stolon     # only those matching namespace=~"min.*|stolon"
+team0:
+  metrics:
+    namespace: '.*'                # all metrics
+team1:
+  metrics:
+    namespace: 'min.*, .*, stolon' # all metrics, it's the same as .*
+team2:
+  metrics:
+    namespace: 'minio'            # only those with namespace="minio"
+team3:
+  metrics:
+    namespace: 'min.*'             # only those matching namespace=~"min.*"
+team4:
+  metrics:
+    namespace: 'minio, stolon'     # only those matching namespace=~"minio|stolon"
+team5:
+  metrics:
+    namespace: 'min.*, stolon'     # only those matching namespace=~"min.*|stolon"
 ```
 
 To summarize, here are the key principles used for rewriting requests:
