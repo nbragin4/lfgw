@@ -214,13 +214,18 @@ func (app *application) rewriteRequestMiddleware(next http.Handler) http.Handler
 			return
 		}
 
+		hasfullaccess := true
 		for _, metadata := range acl.MetricsMeta {
-			if metadata.Fullaccess {
-				hlog.FromRequest(r).Debug().Caller().
-					Msg("User has full access, request is not modified")
-				next.ServeHTTP(w, r)
-				return
+			if !metadata.Fullaccess {
+				hasfullaccess = false
 			}
+		}
+
+		if hasfullaccess {
+			hlog.FromRequest(r).Debug().Caller().
+				Msg("User has full access, request is not modified")
+			next.ServeHTTP(w, r)
+			return
 		}
 
 		err := r.ParseForm()
